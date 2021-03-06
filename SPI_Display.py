@@ -1,19 +1,16 @@
+#!/usr/bin/python3
 from PIL import Image, ImageDraw, ImageGrab
 import os.path
-import gi.repository
-gi.require_version('Gdk', '3.0')
-from gi.repository import Gdk
 import time
 from Xlib import display
 import adafruit_rgb_display.st7789 as st7789
 import digitalio
 import board
-
+import mss
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
 cursor_image = Image.open(os.path.join(script_dir, "cursor.png"))
 cursor_image = cursor_image.resize(((int)(cursor_image.width / 5), (int)(cursor_image.height / 5)))
-
 cs_pin = digitalio.DigitalInOut(board.CE0)
 dc_pin = digitalio.DigitalInOut(board.D25)
 reset_pin = digitalio.DigitalInOut(board.D24)
@@ -35,31 +32,28 @@ disp = st7789.ST7789(
     baudrate=BAUDRATE
 )
 
-def image_grab_gtk():
-    window = Gdk.get_default_root_window()
-    x, y, width, height = window.get_geometry()
+def mmsGrab():
+    with mss.mss() as sct:
+        # Get rid of the first, as it represents the "All in One" monitor:
+        for _, monitor in enumerate(sct.monitors[1:], 1):
+            # Get raw pixels from the screen
+            sct_img = sct.grab(monitor)
 
-    pb = Gdk.pixbuf_get_from_window(window, x, y, width, height)
-    return pb
-
-def pbToPIL(pb):
-    width, height = pb.get_width(), pb.get_height()
-    return Image.frombuffer("RGB", (width, height), pb.get_pixels(), "raw", "RGB", pb.get_rowstride(), 1)
+            # Create the Image
+            img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+            return(img)
 
 width = disp.height
 height = disp.width
 
 while True:
     start_time = time.time()
-
-    #image = ImageGrab.grab()
-    pb = image_grab_gtk()
+    image = mmsGrab()
+    '''pb = image_grab_gtk()
     convert_start = time.time()
     image = pbToPIL(pb)
-    convert_end = time.time()
-
+    convert_end = time.time()'''
     cursor_data = display.Display().screen().root.query_pointer()._data
-
     cursor_pos = (cursor_data["root_x"], cursor_data["root_y"])
 
     image.paste(cursor_image, cursor_pos, cursor_image)
@@ -79,8 +73,6 @@ while True:
     image = image.crop((x, y, x + width, y + height))'''
 
     image = image.resize((240, 135))
-
     disp.image(image)
-	
     print("FPS: ", 1.0 / (time.time() - start_time))
     print("Display time: ", time.time() - start_time)
