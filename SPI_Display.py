@@ -40,7 +40,6 @@ disp = st7789.ST7789(
 
 def mmsGrab(): #gets screenshot
     with mss.mss() as sct:
-        # Get rid of the first, as it represents the "All in One" monitor:
         for _, monitor in enumerate(sct.monitors[1:], 1):
             # Get raw pixels from the screen
             sct_img = sct.grab(monitor)
