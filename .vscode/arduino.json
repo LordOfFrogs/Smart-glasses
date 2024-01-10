@@ -1,0 +1,7 @@
+{
+    "configuration": "cpu=atmega328",
+    "board": "arduino:avr:nano",
+    "programmer": "stk500",
+    "sketch": "hand_controller\\hand_controller.ino",
+    "port": "COM6"
+}
