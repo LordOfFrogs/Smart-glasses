@@ -1,6 +1,7 @@
 {
     "python.languageServer": "Pylance",
     "python.analysis.diagnosticSeverityOverrides": {
+        "reportShadowedImports": "none",
         "reportMissingModuleSource": "none"
     },
     "python.analysis.extraPaths": [

@@ -24,8 +24,8 @@ HALL_PIN_3 = board.GP8
 HALL_PIN_4 = board.GP9
 CLICK_DELAY_MS = 200 # delay between moving finger and clicking to allow for inaccuracy
 ABS_MOUSE_BOUNDS = 32767 # maximum value for position
-TARE_PIN = board.GP21
-MODE_PIN = board.GP18
+TARE_PIN = board.GP18
+MODE_PIN = board.GP21
 
 # Tracks histories of fingers with most recent value at index 0
 # length of CLICK_DELAY_MS//SAMPLERATE_DELAY_MS
