@@ -18,10 +18,10 @@ SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
 # Hall sensor pins
-HALL_PIN_1 = board.GP6
-HALL_PIN_2 = board.GP7
-HALL_PIN_3 = board.GP8
-HALL_PIN_4 = board.GP9
+HALL_PIN_1 = board.GP9
+HALL_PIN_2 = board.GP8
+HALL_PIN_3 = board.GP7
+HALL_PIN_4 = board.GP6
 CLICK_DELAY_MS = 200 # delay between moving finger and clicking to allow for inaccuracy
 ABS_MOUSE_BOUNDS = 32767 # maximum value for position
 TARE_PIN = board.GP18
