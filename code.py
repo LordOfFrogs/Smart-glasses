@@ -6,7 +6,6 @@ import digitalio
 import time
 from absolute_mouse import Mouse
 import adafruit_bno055
-import enum
 
 SAMPLERATE_DELAY_MS = 50 # delay between loops
 
@@ -24,8 +23,8 @@ HALL_PIN_3 = board.GP7
 HALL_PIN_4 = board.GP6
 CLICK_DELAY_MS = 200 # delay between moving finger and clicking to allow for inaccuracy
 ABS_MOUSE_BOUNDS = 32767 # maximum value for position
-TARE_PIN = board.GP18
-MODE_PIN = board.GP21
+TARE_PIN = board.GP21
+MODE_PIN = board.GP18
 
 # Tracks histories of fingers with most recent value at index 0
 # length of CLICK_DELAY_MS//SAMPLERATE_DELAY_MS
@@ -49,16 +48,17 @@ i2c = busio.I2C(board.GP15, board.GP14)
 bno = adafruit_bno055.BNO055_I2C(i2c, 0x28)
 
 zero_yaw = 0.0 # yaw offset
+zero_pitch = 0.0 # pitch offset
 
 # Track button states
 tare_prev = False
 mode_prev = False
 
 # Modes
-class Modes(enum.Enum):
-  IDLE = enum.auto()
-  MOUSE = enum.auto()
-  TYPING = enum.auto()
+class Modes():
+  IDLE = 0
+  MOUSE = 1
+  TYPING = 2
 
 mode = Modes.IDLE
 
@@ -66,7 +66,7 @@ mode = Modes.IDLE
 time.sleep(1)
 
 # Use external crystal for better accuracy
-bno.external_crystal = True
+# bno.external_crystal = True
 
 # Setup hall sensors
 hall1_pin = digitalio.DigitalInOut(HALL_PIN_1)
@@ -82,7 +82,9 @@ hall4_pin = digitalio.DigitalInOut(HALL_PIN_4)
 hall4_pin.pull = digitalio.Pull.UP
 
 tare_pin = digitalio.DigitalInOut(TARE_PIN)
+tare_pin.pull = digitalio.Pull.UP
 mode_pin = digitalio.DigitalInOut(MODE_PIN)
+mode_pin.pull = digitalio.Pull.UP
 
 # Setup input
 # MouseTo.setScreenResolution(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -129,13 +131,15 @@ def NormalizeAngle(angle: float):
   return norm
 
 def MouseUpdate():
+  global state
+  
   # Hall sensors
   hall1 = hall1_pin.value
   hall2 = hall2_pin.value
   hall3 = hall3_pin.value
   hall4 = hall4_pin.value
   
-  hall3 = hall4 # CHEAT because moving middle and ring independently is hard
+  # hall3 = hall4 # CHEAT because moving middle and ring independently is hard
   
   # Update history list
   UpdateHistoryLists(hall1, hall2, hall3, hall4)
@@ -146,15 +150,15 @@ def MouseUpdate():
   hall3_prev = hall3_hist[-1]
   hall4_prev = hall4_hist[-1]
   
-  print(f'{hall1:5s}, {hall2:5s}, {hall3:5s}, {hall4:5s},\t {hall1_prev:5s}, {hall2_prev:5s}, {hall3_prev:5s}, {hall4_prev:5s}')
-
+  # print(f'{str(hall1):5s}, {str(hall2):5}, {str(hall3):5s}, {str(hall4):5s},\t {str(hall1_prev):5s}, {str(hall2_prev):5s}, {str(hall3_prev):5s}, {str(hall4_prev):5s}')
+  
   # Clicking Logic 
   if ( (hall1_prev != state[0] or hall2_prev != state[1] or hall3_prev != state[2] or hall4_prev != state[3])
      and (hall1 == hall1_prev and hall2 == hall2_prev and hall3 == hall3_prev and hall4 == hall4_prev) ):
     # if something is different and no fingers are actively changing
-   
+    print('1')
     if (hall1_prev and hall2_prev and hall3_prev and hall4_prev): # if all are down
-      
+      print('2')
       if state == [False, True, True, True]:
         m.press(Mouse.LEFT_BUTTON)
       elif state == [False, False, True, True]:
@@ -169,13 +173,14 @@ def MouseUpdate():
     state = [hall1_prev, hall2_prev, hall3_prev, hall4_prev] # update state
     ClearHistoryLists()
   
-
-  # Mouse movement
+def MousePositionUpdate():
+  global zero_yaw, tare_prev
+  
   yaw = bno.euler[0] - zero_yaw
   pitch = bno.euler[2]
-  print(yaw, pitch)
+
   yaw = NormalizeAngle(yaw)
-  pitch = -NormalizeAngle(180 - pitch) # Use flipped pitch because upside-down
+  pitch = NormalizeAngle(180 - pitch) # Use flipped pitch because IMU is upside-down
 
   tare_btn = not tare_pin.value
   if (tare_btn and not tare_prev):
@@ -205,8 +210,8 @@ while True:
   
   # Run appropriate update function
   if mode == Modes.MOUSE:
-    MouseUpdate()
+    MousePositionUpdate()
   
-  
+  print(hall1_pin.value, hall2_pin.value, hall3_pin.value, hall4_pin.value)
   time.sleep(SAMPLERATE_DELAY_MS/1000) # Delay loop
 
