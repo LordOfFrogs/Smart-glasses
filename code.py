@@ -58,7 +58,7 @@ mode_prev = False
 class Modes():
   IDLE = 0
   MOUSE = 1
-  TYPING = 2
+  MOUSE_CLICKING = 2
 
 mode = Modes.IDLE
 
@@ -130,7 +130,7 @@ def NormalizeAngle(angle: float):
   norm = (norm + 180) % 360 - 180 # [-180,180]
   return norm
 
-def MouseUpdate():
+def MouseButtonsUpdate():
   global state
   
   # Hall sensors
@@ -138,8 +138,6 @@ def MouseUpdate():
   hall2 = hall2_pin.value
   hall3 = hall3_pin.value
   hall4 = hall4_pin.value
-  
-  # hall3 = hall4 # CHEAT because moving middle and ring independently is hard
   
   # Update history list
   UpdateHistoryLists(hall1, hall2, hall3, hall4)
@@ -149,9 +147,7 @@ def MouseUpdate():
   hall2_prev = hall2_hist[-1]
   hall3_prev = hall3_hist[-1]
   hall4_prev = hall4_hist[-1]
-  
-  # print(f'{str(hall1):5s}, {str(hall2):5}, {str(hall3):5s}, {str(hall4):5s},\t {str(hall1_prev):5s}, {str(hall2_prev):5s}, {str(hall3_prev):5s}, {str(hall4_prev):5s}')
-  
+    
   # Clicking Logic 
   if ( (hall1_prev != state[0] or hall2_prev != state[1] or hall3_prev != state[2] or hall4_prev != state[3])
      and (hall1 == hall1_prev and hall2 == hall2_prev and hall3 == hall3_prev and hall4 == hall4_prev) ):
@@ -169,6 +165,41 @@ def MouseUpdate():
     elif ( not (hall1_prev or hall2_prev or hall3_prev or hall4_prev) 
           or state == [True, True, True, True] ): # if none are down or previously all were down
       m.release_all()
+    
+    state = [hall1_prev, hall2_prev, hall3_prev, hall4_prev] # update state
+    ClearHistoryLists()
+    
+def MouseClickUpdate():
+  global state
+  
+  # Hall sensors
+  hall1 = hall1_pin.value
+  hall2 = hall2_pin.value
+  hall3 = hall3_pin.value
+  hall4 = hall4_pin.value
+  
+  # Update history list
+  UpdateHistoryLists(hall1, hall2, hall3, hall4)
+
+  # Last recorded values
+  hall1_prev = hall1_hist[-1]
+  hall2_prev = hall2_hist[-1]
+  hall3_prev = hall3_hist[-1]
+  hall4_prev = hall4_hist[-1]
+  
+  # Clicking Logic 
+  if ( (hall1_prev != state[0] or hall2_prev != state[1] or hall3_prev != state[2] or hall4_prev != state[3])
+     and (hall1 == hall1_prev and hall2 == hall2_prev and hall3 == hall3_prev and hall4 == hall4_prev) ):
+    # if something is different and no fingers are actively changing
+    print('1')
+    if (hall1_prev and hall2_prev and hall3_prev and hall4_prev): # if all are down
+      print('2')
+      if state == [False, True, True, True]:
+        m.click(Mouse.LEFT_BUTTON)
+      elif state == [False, False, True, True]:
+        m.click(Mouse.RIGHT_BUTTON)
+      elif state == [False, False, False, True]: # in current setup, won't ever happen
+        m.click(Mouse.MIDDLE_BUTTON)
     
     state = [hall1_prev, hall2_prev, hall3_prev, hall4_prev] # update state
     ClearHistoryLists()
@@ -203,15 +234,18 @@ while True:
   
   if mode_btn and not mode_prev:
     if mode == Modes.IDLE: mode = Modes.MOUSE
-    elif mode == Modes.MOUSE: mode = Modes.TYPING
-    elif mode == Modes.TYPING: mode = Modes.IDLE
+    elif mode == Modes.MOUSE: mode = Modes.MOUSE_CLICKING
+    elif mode == Modes.MOUSE_CLICKING: mode = Modes.IDLE
     
   mode_prev = mode_btn
   
   # Run appropriate update function
   if mode == Modes.MOUSE:
     MousePositionUpdate()
+    MouseButtonsUpdate()
+  elif mode == Modes.MOUSE_CLICKING:
+    MousePositionUpdate()
+    MouseClickUpdate()
   
-  print(hall1_pin.value, hall2_pin.value, hall3_pin.value, hall4_pin.value)
   time.sleep(SAMPLERATE_DELAY_MS/1000) # Delay loop
 
