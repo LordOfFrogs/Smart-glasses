@@ -1,15 +1,21 @@
 import math
 
 class Vector:
-    x, y, z = 0.0
+    x, y, z = 0, 0, 0
     
-    def __init__(self):
-        pass
+    def __init__(self, *args):
+        if (len(args) == 3 and isinstance(args[0], (int, float))
+            and isinstance(args[1], (int, float)) and isinstance(args[2], (int, float))):
+            
+            self.init_vector(*args)
     
-    def __init__(self, x: float, y:float, z: float):
+    def init_vector(self, x: float, y:float, z: float):
         self.x = x
         self.y = y
         self.z = z
+        
+    def asTuple(self):
+        return (self.x, self.y, self.z)
         
     def __add__(self, other: 'Vector') -> 'Vector':
         return Vector(self.x+other.x, self.y+other.y, self.z+other.z)
@@ -38,19 +44,49 @@ class Vector:
     
     def inclination(self) -> float:
         return 90 - math.degrees(math.acos(self.z / self.magnitude()))
+    
+    def __str__(self):
+        return f"({self.x}, {self.y}, {self.z})"
 
 class Quaternion:
-    a, b, c, d = 0.0
+    a, b, c, d = 0, 0, 0, 0
     
-    def __init__(self):
-        self.a = 1.0
-        
-    def __init__(self, vec: Vector):
+    def __init__(self, *args):
+        if len(args) == 0:
+            self.init_default()
+            
+        elif len(args) == 1 and isinstance(args[0], Vector):
+            self.init_vector(*args)
+            
+        elif len(args) == 1 and isinstance(args[0], Quaternion):
+            self.init_quat(*args[0].asTuple())
+            
+        elif (len(args) == 2 and isinstance(args[0], (int, float))
+              and isinstance(args[1], Vector)):
+            self.init_scalar_vector(*args)
+            
+        elif (len(args) == 4 
+            and isinstance(args[0], (int, float)) and isinstance(args[1], (int, float))
+            and isinstance(args[2], (int, float))
+            and isinstance(args[3], (int, float))):
+            
+            self.init_quat(*args)
+    
+    def init_default(self):
+        self.a = 1.0    
+    
+    def init_vector(self, vec: Vector):
         self.b = vec.x
         self.c = vec.y
         self.d = vec.z
     
-    def __init__(self, a: float, b: float, c: float, d: float):
+    def init_scalar_vector(self, num: float, vec: Vector):
+        self.a = num
+        self.b = vec.x
+        self.c = vec.y
+        self.d = vec.z
+    
+    def init_quat(self, a: float, b: float, c: float, d: float):
         self.a = a
         self.b = b
         self.c = c
@@ -63,29 +99,23 @@ class Quaternion:
         return Vector(self.b, self.c, self.d)
     
     def __mul__(self, other: 'Quaternion') -> 'Quaternion':
-        vec = self.getVector()
-        vec1 = other.getVector()
+        other = Quaternion(other)
         
-        scalar_part = self.a*other.a - vec.dot(vec1)
-        vector_part = self.a*vec1 + other.a*vec + vec.cross(vec1)
-        return scalar_part + vector_part
+        a_new = self.a*other.a - self.b*other.b - self.c*other.c - self.d*other.d
+        b_new = self.a*other.b + self.b*other.a + self.c*other.d - self.d*other.c
+        c_new = self.a*other.c - self.b*other.d + self.c*other.a + self.d*other.b
+        d_new = self.a*other.d + self.b*other.c - self.c*other.b + self.d*other.a
+
+        return Quaternion(a_new, b_new, c_new, d_new)
     
     def __rmul__(self, other: 'Quaternion') -> 'Quaternion':
-        return self.__mul__(other)
+        return other.__mul__(self)
     
     def __add__(self, num: float) -> 'Quaternion':
         return Quaternion(self.a+num, self.b, self.c, self.d)
     
     def conjugate(self) -> 'Quaternion':
         return Quaternion(self.a, -self.b, -self.c, -self.c)
-
-def normalize_angle(angle: float):
-    """Normalize angle to between -180 and 180 degrees
-
-    Args:
-        angle (float): Angle in degrees
-    """
-    norm = angle % 360 # [-360,360]
-    norm = (norm + 360) % 360 # [0,360]
-    norm = (norm + 180) % 360 - 180 # [-180,180]
-    return norm
+    
+    def __str__(self):
+        return f"({self.a}, {self.b}, {self.c}, {self.d})"
