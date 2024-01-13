@@ -6,7 +6,7 @@ import digitalio
 import time
 from absolute_mouse import Mouse
 import adafruit_bno055
-from utils import Quaternion, Vector
+import math
 
 SAMPLERATE_DELAY_MS = 50 # delay between loops
 
@@ -48,7 +48,8 @@ i2c = busio.I2C(board.GP15, board.GP14)
 #                                   id, address
 bno = adafruit_bno055.BNO055_I2C(i2c, 0x28)
 
-zero_quat = Quaternion()
+zero_yaw = 0.0
+zero_pitch = -180.0 # start with presumed flip
 
 # Track button states
 tare_prev = False
@@ -81,6 +82,17 @@ mode_pin.pull = digitalio.Pull.UP
 
 # Setup mouse
 m = Mouse(usb_hid.devices)
+
+def normalize_angle(angle: float) -> float:
+    """Normalize angle to between -180 and 180 degrees
+
+    Args:
+        angle (float): Angle in degrees
+    """
+    norm = angle % 360 # [-360,360]
+    norm = (norm + 360) % 360 # [0,360]
+    norm = (norm + 180) % 360 - 180 # [-180,180]
+    return norm
 
 def update_history_lists(hall1: bool, hall2: bool, hall3: bool, hall4: bool):
     """Updates history lists to all be current state
@@ -184,23 +196,28 @@ def MouseClickUpdate():
 def MousePositionUpdate():
     global zero_yaw, zero_pitch, tare_prev
 
-    quat_raw = Quaternion(*bno.quaternion)
+    q = bno.quaternion
+
+    yaw = -math.degrees(math.atan2(q[1]*q[2] + q[0]*q[3], q[0]*q[1] + q[1]*q[1] - 0.5))
+    pitch = math.degrees(math.atan2(q[0]*q[1]+q[2]*q[3], q[0]*q[0]+q[3]*q[3]-0.5))
+    
+    yaw = normalize_angle(yaw)
+    pitch = normalize_angle(pitch)
 
     tare_btn = not tare_pin.value
     if (tare_btn and not tare_prev):
         # Tare
-        zero_quat = quat_raw
+        zero_yaw = yaw
+        zero_pitch = pitch
 
     tare_prev = tare_btn
 
-    quat = quat_raw * zero_quat.conjugate()
-    heading_vec = (quat * Vector(0, 1, 0) * quat.conjugate()).getVector()
-
-    yaw = heading_vec.azimuth()
+    yaw = normalize_angle(yaw - zero_yaw)
+    pitch = normalize_angle(pitch - zero_pitch)
+    
     yaw = max(-X_BOUND, min(yaw, X_BOUND))
     xPos = (yaw+X_BOUND) * ABS_MOUSE_BOUNDS // (2.0*X_BOUND)
 
-    pitch = heading_vec.inclination()
     pitch = max(-Y_BOUND, min(pitch, Y_BOUND))
     yPos = (pitch+Y_BOUND) * ABS_MOUSE_BOUNDS // (2.0*Y_BOUND)
 
