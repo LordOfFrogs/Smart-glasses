@@ -4,7 +4,8 @@ import board
 import busio
 import digitalio
 import time
-from absolute_mouse import Mouse
+#from absolute_mouse import Mouse as AbsMouse
+from abs_mouse import Mouse
 import adafruit_bno055
 import math
 
@@ -82,6 +83,7 @@ mode_pin.pull = digitalio.Pull.UP
 
 # Setup mouse
 m = Mouse(usb_hid.devices)
+mouse_buttons = Mouse(usb_hid.devices)
 
 def normalize_angle(angle: float) -> float:
     """Normalize angle to between -180 and 180 degrees
@@ -138,7 +140,7 @@ def MouseButtonsUpdate():
     hall2_prev = hall2_hist[-1]
     hall3_prev = hall3_hist[-1]
     hall4_prev = hall4_hist[-1]
-        
+    
     # Clicking Logic 
     if ( (hall1_prev != state[0] or hall2_prev != state[1] or hall3_prev != state[2] or hall4_prev != state[3])
         and (hall1 == hall1_prev and hall2 == hall2_prev and hall3 == hall3_prev and hall4 == hall4_prev) ):
